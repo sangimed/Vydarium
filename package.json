@@ -1,0 +1,35 @@
+{
+  "name": "vidravault",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-hosted video intelligence and retrieval pipeline.",
+  "packageManager": "pnpm@10.15.1",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel --filter=!@vidravault/mcp",
+    "dev:mcp": "pnpm --filter @vidravault/mcp dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "format": "prettier --write .",
+    "db:generate": "pnpm --filter @vidravault/db db:generate",
+    "db:migrate": "pnpm --filter @vidravault/db db:migrate",
+    "db:studio": "pnpm --filter @vidravault/db db:studio"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.1",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.6.2",
+    "turbo": "^2.6.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.0",
+    "vitest": "^4.0.14"
+  }
+}

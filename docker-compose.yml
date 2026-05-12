@@ -1,0 +1,90 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vidravault
+      POSTGRES_USER: vidravault
+      POSTGRES_PASSWORD: vidravault
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vidravault -d vidravault"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://vidravault:vidravault@postgres:5432/vidravault?schema=public
+      REDIS_URL: redis://redis:6379
+      API_HOST: 0.0.0.0
+      API_PORT: 4000
+      PUBLIC_APP_URL: http://localhost:5173
+      WEB_ORIGIN: http://localhost:5173
+      JWT_SECRET: ${JWT_SECRET:-vidravault-local-only-insecure-default-please-rotate}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-vidravault-admin-password}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      ARTIFACTS_DIR: /data/artifacts
+      EXPORTS_DIR: /data/exports
+      TRANSCRIPTION_PROVIDER: ${TRANSCRIPTION_PROVIDER:-mock}
+      MCP_API_TOKEN: ${MCP_API_TOKEN:-change-me-for-local-mcp-use}
+    ports:
+      - "4000:4000"
+    volumes:
+      - artifacts_data:/data/artifacts
+      - exports_data:/data/exports
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:4000
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "5173:80"
+
+  mcp:
+    profiles: ["mcp"]
+    build:
+      context: .
+      dockerfile: docker/mcp.Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://vidravault:vidravault@postgres:5432/vidravault?schema=public
+      JWT_SECRET: ${JWT_SECRET:-vidravault-local-only-insecure-default-please-rotate}
+      MCP_ENABLED: "true"
+      MCP_API_BASE_URL: http://api:4000
+      MCP_API_TOKEN: ${MCP_API_TOKEN:-change-me-for-local-mcp-use}
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:
+  artifacts_data:
+  exports_data:

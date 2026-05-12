@@ -1,0 +1,379 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  MEMBER
+}
+
+enum SourceType {
+  YOUTUBE
+  OTHER
+}
+
+enum VideoStatus {
+  QUEUED
+  PROCESSING
+  READY
+  FAILED
+  DELETED
+}
+
+enum PipelineRunStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum PipelineStepName {
+  CAPTURE
+  CAPTIONS
+  AUDIO
+  TRANSCRIPTION
+  CLEANING
+  CHUNKING
+  FRAMES
+  NOTES
+  INDEXING
+}
+
+enum StepStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+enum ArtifactType {
+  CAPTION
+  AUDIO
+  TRANSCRIPT_RAW
+  TRANSCRIPT_CLEAN
+  FRAME
+  NOTE_MARKDOWN
+  METADATA_JSON
+  THUMBNAIL
+}
+
+enum TranscriptType {
+  RAW
+  CLEAN
+}
+
+enum ChunkSourceType {
+  TRANSCRIPT_RAW
+  TRANSCRIPT_CLEAN
+  NOTE
+  SUMMARY
+  COMMAND
+  QUOTE
+  CONCEPT
+}
+
+enum ExportJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  displayName  String?
+  role         Role     @default(OWNER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  videos       Video[]
+  apiTokens    ApiToken[]
+  pipelineRuns PipelineRun[]
+}
+
+model ApiToken {
+  id          String    @id @default(cuid())
+  userId      String
+  name        String
+  tokenHash   String    @unique
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Video {
+  id              String      @id @default(cuid())
+  ownerId         String?
+  sourceUrl       String
+  canonicalUrl    String?
+  sourceType      SourceType  @default(YOUTUBE)
+  title           String?
+  channelName     String?
+  description     String?
+  durationSeconds Int?
+  publicationDate DateTime?
+  thumbnailPath   String?
+  status          VideoStatus @default(QUEUED)
+  language        String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  owner            User?             @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  sources          VideoSource[]
+  pipelineRuns     PipelineRun[]
+  pipelineSteps    PipelineStep[]
+  artifacts        Artifact[]
+  transcripts      Transcript[]
+  transcriptChunks TranscriptChunk[]
+  notes            Note[]
+  noteChunks       NoteChunk[]
+  tags             VideoTag[]
+  searchIndexes    SearchIndex[]
+  exportJobs       ExportJob[]
+
+  @@index([status])
+  @@index([sourceType])
+  @@index([createdAt])
+}
+
+model VideoSource {
+  id          String     @id @default(cuid())
+  videoId     String
+  provider    SourceType @default(YOUTUBE)
+  externalId  String?
+  url         String
+  canonicalUrl String?
+  metadata    Json?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([provider, externalId])
+  @@index([videoId])
+}
+
+model PipelineRun {
+  id            String            @id @default(cuid())
+  videoId       String
+  createdById   String?
+  status        PipelineRunStatus @default(QUEUED)
+  requestedStep PipelineStepName?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  error         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  video     Video          @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  createdBy User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  steps     PipelineStep[]
+  events    PipelineEvent[]
+
+  @@index([videoId])
+  @@index([status])
+}
+
+model PipelineStep {
+  id          String           @id @default(cuid())
+  runId       String
+  videoId     String
+  name        PipelineStepName
+  status      StepStatus       @default(PENDING)
+  startedAt   DateTime?
+  completedAt DateTime?
+  error       String?
+  attempts    Int              @default(0)
+  logs        Json?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  run    PipelineRun     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  video  Video           @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  events PipelineEvent[]
+
+  @@unique([runId, name])
+  @@index([videoId, name])
+  @@index([status])
+}
+
+model PipelineEvent {
+  id        String   @id @default(cuid())
+  runId     String
+  stepId    String?
+  level     String   @default("info")
+  message   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  run  PipelineRun   @relation(fields: [runId], references: [id], onDelete: Cascade)
+  step PipelineStep? @relation(fields: [stepId], references: [id], onDelete: SetNull)
+
+  @@index([runId, createdAt])
+  @@index([stepId])
+}
+
+model Artifact {
+  id        String       @id @default(cuid())
+  videoId   String
+  type      ArtifactType
+  path      String
+  mimeType  String?
+  size      BigInt?
+  checksum  String?
+  metadata  Json?
+  createdAt DateTime     @default(now())
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId, type])
+}
+
+model Transcript {
+  id               String         @id @default(cuid())
+  videoId          String
+  type             TranscriptType
+  language         String?
+  text             String
+  segments         Json?
+  sourceArtifactId String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, type])
+  @@index([videoId])
+}
+
+model TranscriptChunk {
+  id             String          @id @default(cuid())
+  videoId        String
+  sourceType     ChunkSourceType
+  text           String
+  normalizedText String?
+  startTime      Float?
+  endTime        Float?
+  chunkIndex     Int
+  tokenCount     Int?
+  characterCount Int
+  sourceUrl      String
+  tags           String[]        @default([])
+  embeddingId    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, sourceType, chunkIndex])
+  @@index([videoId, sourceType])
+  @@index([chunkIndex])
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  videoId   String
+  title     String?
+  markdown  String
+  summary   String?
+  tags      String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  video  Video       @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  chunks NoteChunk[]
+
+  @@index([videoId])
+}
+
+model NoteChunk {
+  id             String          @id @default(cuid())
+  videoId        String
+  noteId         String
+  sourceType     ChunkSourceType
+  text           String
+  normalizedText String?
+  startTime      Float?
+  endTime        Float?
+  chunkIndex     Int
+  tokenCount     Int?
+  characterCount Int
+  sourceUrl      String
+  tags           String[]        @default([])
+  embeddingId    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  note  Note  @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, sourceType, chunkIndex])
+  @@index([videoId, sourceType])
+}
+
+model Tag {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  createdAt DateTime   @default(now())
+  videos    VideoTag[]
+}
+
+model VideoTag {
+  videoId String
+  tagId   String
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([videoId, tagId])
+  @@index([tagId])
+}
+
+model SearchIndex {
+  id             String   @id @default(cuid())
+  videoId        String
+  entityType     String
+  entityId       String
+  sourceType     String
+  text           String
+  normalizedText String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([entityType, entityId])
+  @@index([videoId])
+  @@index([sourceType])
+}
+
+model ExportJob {
+  id          String          @id @default(cuid())
+  videoId     String
+  target      String
+  status      ExportJobStatus @default(QUEUED)
+  artifactId  String?
+  error       String?
+  createdAt   DateTime        @default(now())
+  completedAt DateTime?
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@index([status])
+}
