@@ -38,13 +38,20 @@ export function VideoList() {
           </Button>
         }
       />
-      <div className="mb-4 grid gap-3 rounded border border-stone-200 bg-white p-3 md:grid-cols-[1fr_180px]">
+      <div className="mb-4 grid gap-3 surface rounded-lg p-3 md:grid-cols-[1fr_180px]">
         <label className="relative block">
-          <Search className="pointer-events-none absolute left-3 top-2.5 size-4 text-stone-400" aria-hidden="true" />
-          <Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} />
+          <Search
+            className="pointer-events-none absolute left-3 top-2.5 size-4 text-[#8a98a8]"
+            aria-hidden="true"
+          />
+          <Input
+            className="pl-9"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
         </label>
         <select
-          className="focus-ring h-10 rounded border border-stone-300 bg-white px-3 text-sm"
+          className="focus-ring h-10 rounded-md border border-[#cbd7e1] bg-white px-3 text-sm"
           value={status}
           onChange={(event) => setStatus(event.target.value)}
         >
@@ -58,9 +65,9 @@ export function VideoList() {
       {videos.length === 0 ? (
         <EmptyState title="No matching videos." />
       ) : (
-        <div className="overflow-x-auto rounded border border-stone-200 bg-white">
+        <div className="overflow-x-auto surface rounded-lg">
           <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="border-b border-stone-200 bg-stone-50 text-xs uppercase text-stone-600">
+            <thead className="border-b border-[#d8e2ea] bg-[#f7fafc] text-xs uppercase text-[#596776]">
               <tr>
                 <th className="px-3 py-2">Title</th>
                 <th className="px-3 py-2">Channel</th>
@@ -71,25 +78,34 @@ export function VideoList() {
             </thead>
             <tbody>
               {videos.map((video) => (
-                <tr key={video.id} className="border-b border-stone-100 last:border-b-0 hover:bg-stone-50">
+                <tr
+                  key={video.id}
+                  className="border-b border-[#e4ebf1] last:border-b-0 hover:bg-[#f7fafc]"
+                >
                   <td className="max-w-md px-3 py-3">
-                    <Link to={`/videos/${video.id}`} className="font-semibold text-teal-900 hover:underline">
+                    <Link
+                      to={`/videos/${video.id}`}
+                      className="font-semibold text-[#0b5954] hover:underline"
+                    >
                       {video.title ?? video.sourceUrl}
                     </Link>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {video.tags.map((tag) => (
-                        <span key={tag} className="rounded bg-stone-100 px-1.5 py-0.5 text-xs text-stone-600">
+                        <span
+                          key={tag}
+                          className="rounded-md bg-[#edf3f7] px-1.5 py-0.5 text-xs text-[#596776]"
+                        >
                           {tag}
                         </span>
                       ))}
                     </div>
                   </td>
-                  <td className="px-3 py-3 text-stone-700">{video.channelName ?? "Unknown"}</td>
+                  <td className="px-3 py-3 text-[#334252]">{video.channelName ?? "Unknown"}</td>
                   <td className="px-3 py-3">
                     <StatusBadge status={video.status} />
                   </td>
-                  <td className="px-3 py-3 text-stone-700">{video.failedStep ?? ""}</td>
-                  <td className="px-3 py-3 text-stone-700">{shortDate(video.createdAt)}</td>
+                  <td className="px-3 py-3 text-[#334252]">{video.failedStep ?? ""}</td>
+                  <td className="px-3 py-3 text-[#334252]">{shortDate(video.createdAt)}</td>
                 </tr>
               ))}
             </tbody>

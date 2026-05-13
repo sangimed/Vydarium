@@ -31,7 +31,11 @@ function RequireAuth() {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div className="grid min-h-screen place-items-center bg-[#f7f7f3] text-stone-700">Loading</div>;
+    return (
+      <div className="app-bg grid min-h-screen place-items-center text-sm font-medium text-[#596776]">
+        Loading
+      </div>
+    );
   }
 
   if (!user) {

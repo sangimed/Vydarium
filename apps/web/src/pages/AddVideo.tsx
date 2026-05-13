@@ -40,7 +40,7 @@ export function AddVideo() {
     <>
       <PageHeader title="Add video" />
       <form
-        className="max-w-3xl rounded border border-stone-200 bg-white p-4"
+        className="max-w-3xl surface rounded-lg p-4"
         onSubmit={form.handleSubmit(async (values) => {
           setError(null);
           try {
@@ -56,27 +56,40 @@ export function AddVideo() {
         })}
       >
         <label className="mb-4 block">
-          <span className="mb-1 block text-sm font-semibold text-stone-700">YouTube URL</span>
-          <Input placeholder="https://www.youtube.com/watch?v=..." {...form.register("sourceUrl")} />
+          <span className="mb-1 block text-sm font-semibold text-[#334252]">YouTube URL</span>
+          <Input
+            placeholder="https://www.youtube.com/watch?v=..."
+            {...form.register("sourceUrl")}
+          />
           {form.formState.errors.sourceUrl ? (
-            <span className="mt-1 block text-sm text-rose-700">{form.formState.errors.sourceUrl.message}</span>
+            <span className="mt-1 block text-sm text-rose-700">
+              {form.formState.errors.sourceUrl.message}
+            </span>
           ) : null}
         </label>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-stone-700">Caption languages</span>
+            <span className="mb-1 block text-sm font-semibold text-[#334252]">
+              Caption languages
+            </span>
             <Input {...form.register("languageText")} />
           </label>
           <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-stone-700">Tags</span>
+            <span className="mb-1 block text-sm font-semibold text-[#334252]">Tags</span>
             <Input placeholder="mlx, whisper, transcription" {...form.register("tagText")} />
           </label>
         </div>
-        <label className="mt-4 flex items-center gap-2 text-sm font-semibold text-stone-700">
-          <input type="checkbox" className="size-4 accent-teal-800" {...form.register("captionsFirst")} />
+        <label className="mt-4 flex items-center gap-2 text-sm font-semibold text-[#334252]">
+          <input
+            type="checkbox"
+            className="size-4 accent-[#0f766e]"
+            {...form.register("captionsFirst")}
+          />
           Captions before audio
         </label>
-        {error ? <p className="mt-4 rounded bg-rose-50 p-2 text-sm text-rose-700">{error}</p> : null}
+        {error ? (
+          <p className="mt-4 rounded bg-rose-50 p-2 text-sm text-rose-700">{error}</p>
+        ) : null}
         <div className="mt-5 flex justify-end">
           <Button type="submit" variant="primary" disabled={mutation.isPending}>
             Queue ingestion
